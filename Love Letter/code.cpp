@@ -15,6 +15,7 @@
 #include <vector>
 #include <string>
 #include <cstdlib>
+#include <ctime>
 #include <unistd.h>
 using namespace std;
 
@@ -35,6 +36,7 @@ void start_menu(){
     cout << "5.国王 king：与另一位玩家交换手牌" << endl;
     cout << "6.女伯爵 countess：有王子或国王时会强制打出" << endl;
     cout << "7.公主 princess：打出时会立即出局" << endl;
+    cout << "场上有四名玩家，分别是你，玩家2，玩家3，玩家4" << endl;
 }
 
 //随机抽取一张牌
@@ -127,7 +129,7 @@ public:
                 else{
                     int guess = 0;
                     do{
-                        cout << "请猜测它的身份牌：" << endl;
+                        cout << "请猜测它的身份牌：";
                         cin >> guess;
                         if (guess < 0 || guess > 7){
                             cout << "请重新猜测!" << endl;
@@ -139,6 +141,7 @@ public:
 
                     if (member[choose - 1].card[0] == guess){
                         cout << "猜测正确！" << endl;
+                        cout << "player" << choose << "死亡！" << endl;
                         cout << "你的回合结束" << endl;
                         member[choose - 1].isAlive = false;
                     }
@@ -322,6 +325,8 @@ public:
 
         }
         int show = card[rand() % 2];
+        card.clear();
+        card.push_back(sum - show);
 
         switch(show){
             case 0:{
@@ -397,7 +402,7 @@ public:
                     return;
                 }
                 else{
-                    string tar = choose == 0 ? "你" : "玩家" + (char)(cur_id + '0');
+                    string tar = choose == 0 ? (string)"你" : (string)"玩家" + (to_string)(choose + 1);
                     if (card[0] > member[choose].card[0]){
                         cout << tar << "死亡" << endl;
                         member[choose].isAlive = false;
@@ -536,22 +541,22 @@ void game(){
     //当前玩家号码
     int cur_id = 1;
 
-    while(player.isAlive + AI_1.isAlive + AI_2.isAlive + AI_3.isAlive >= 1
+    while(member[0].isAlive + member[1].isAlive + member[2].isAlive + member[3].isAlive >= 1
     && count != 0){
         sleep(1);
         //先处理场上只有一名玩家存活的情况
-        if (player.isAlive + AI_1.isAlive + AI_2.isAlive + AI_3.isAlive == 1){
-            if (player.isAlive){
+        if (member[0].isAlive + member[1].isAlive + member[2].isAlive + member[3].isAlive == 1){
+            if (member[0].isAlive){
                 cout << "只有你存活！" << endl;
                 cout << "你获得胜利！" << endl;
                 return;
             }
-            else if (AI_1.isAlive){
+            else if (member[1].isAlive){
                 cout << "只有玩家2存活！" << endl;
                 cout << "玩家2获得胜利！" << endl;
                 return;
             }
-            else if (AI_2.isAlive){
+            else if (member[2].isAlive){
                 cout << "只有玩家3存活！" << endl;
                 cout << "玩家3获得胜利！" << endl;
                 return;
