@@ -55,7 +55,7 @@ int read_int(const string& prompt){
 
 //随机抽取一张牌
 int create_card(vector<int>& rest, int& count){
-    if (count == 0){ return -1; }
+    if (count <= 0) {return -1;}
     int x = -1;
     while(x < 0 || rest[x] == 0){
         x = rand() % 8;
@@ -85,23 +85,23 @@ public:
             return true;
         }
         int c = create_card(rest, count);
-        if (c == -1) {return false;}
         card[0] = c;
         return false;
 
     }
 
     //玩家回合
-    void player_turn(vector<int>& rest, vector<Player>& member, int& c, int& count){
+    void player_turn(vector<int>& rest, vector<Player>& member, int& count){
         cout << "你的回合!" << endl;
-        cout << "你摸到了" << c << "." << card_name[c];
+        cout << "你摸到了" << card[1] << "." << card_name[card[1]];
         cout << "，你原来的手牌是" << card[0] << "." << card_name[card[0]] << endl;
-        int sum = card[0] + c;
+        int sum = card[0] + card[1];
         //女伯爵强制打出
-        if ((c == 6 && (card[0] == 4 || card[0] == 5))
-            || (card[0] == 6 && (c == 4 || c == 5))){
-            sleep(2.5);
+        if ((card[1] == 6 && (card[0] == 4 || card[0] == 5))
+            || (card[0] == 6 && (card[1] == 4 || card[1] == 5))){
+            sleep(2);
             cout << "你必须打出6.女伯爵" << endl;
+            card.pop_back();
             card[0] = sum - 6;
             return;
 
@@ -109,7 +109,7 @@ public:
         int show = 0;
         do{
             show = read_int((string)"请选择你要出的牌: ");
-            if (show != c && show != card[0]){
+            if (show != card[0] && show != card[1]){
                 cout << "你没有这张牌！" << endl;
             }
             else{
@@ -117,6 +117,7 @@ public:
             }
         } while (true);
         cout << "你打出了" << show << "." << card_name[show] << endl;
+        card.pop_back();
         card[0] = sum - show;
 
         switch(show){
@@ -142,7 +143,7 @@ public:
                     int guess = 0;
                     do{
                         guess = read_int((string)"请猜测他的身份牌：");
-                        if (guess < 0 || guess > 7){
+                        if (guess < 1 || guess > 7){
                             cout << "请重新猜测!" << endl;
                         }
                         else{
@@ -254,15 +255,20 @@ public:
                     cout << "你弃掉了" << card[0] << "." << card_name[card[0]] << endl;
 
                 }
+                if (count == 0){
+                    cout << "牌堆里没有牌，技能无效" << endl;
+                    return;
+
+                }
 
                 bool someone_dead = member[choose - 1].throw_card(rest, count);
                 if (someone_dead){
                     if (choose == 1){
-                        cout << "你死亡" << endl;
+                        cout << "你因弃掉公主而死亡" << endl;
                         return;
                     }
                     else{
-                        cout << "它死亡" << endl;
+                        cout << "他因弃掉公主而死亡" << endl;
                     }
                 }
 
@@ -353,7 +359,7 @@ public:
                 }
                 else{
                     string tar = choose == 0 ? (string)"你" : ((string)"玩家" + (to_string)(choose + 1));
-                    int guess = rand() % 8;
+                    int guess = rand() % 7 + 1;
                     cout << name << "猜测" << tar << "的身份为" << guess << endl;
                     if (member[choose].card[0] == guess){
                         cout << "猜测正确！" << endl;
@@ -443,31 +449,31 @@ public:
                 do{
                     choose = (choose + 1) % 4;
                 }while(!member[choose].isAlive || !member[choose].bechosen);
+                string tar = "";
 
                 if (choose == cur_id - 1){
-                    cout << name << "选择了自己作为技能目标" << endl;
-                    return;
+                    tar = name;
                 }
                 else{
-                    string tar = choose == 0 ? (string)"你" : (string)"玩家" + (to_string)(choose + 1);
-                    cout << name << "选择了" << tar << "作为技能目标" << endl;
-                    cout << tar << "需要弃掉一张牌" << endl;
-                    bool someone_dead = member[choose].throw_card(rest, count);
-                    if (choose == 0){
-                        cout << "你现在的手牌是" << member[0].card[0] << "." << card_name[member[0].card[0]] << endl;
-                    }
-                    
-
-                    if (someone_dead){
-                        cout << tar << "因弃掉了公主而死亡了" << endl;
-                    }
-                    
+                    tar = choose == 0 ? (string)"你" : (string)"玩家" + (to_string)(choose + 1);
                 }
+                if (count == 0){
+                    cout << "牌堆里没有牌，技能无效" << endl;
+                    return;
+
+                }
+                //进行弃牌，并判断有没有死人
+                bool someone_dead = member[choose].throw_card(rest, count);
+                if (choose == 0){
+                    cout << "你现在的手牌是" << member[0].card[0] << "." << card_name[member[0].card[0]] << endl;
+                }
+                    
+                if (someone_dead){
+                    cout << tar << "因弃掉了公主而死亡了" << endl;
+                }
+                    
                 break;
                 
-                
-               
-
             }
             
             case 5:{
@@ -479,7 +485,6 @@ public:
 
                 if (choose == cur_id - 1){
                     cout << name << "选择了自己作为技能目标" << endl;
-                    cout << name << "的回合结束" << endl;
                     return;
                 }
                 else{
@@ -524,7 +529,7 @@ public:
         cout << "牌堆剩余" << count << "张牌" << endl;
         card.push_back(c);
         if (cur_id == 1){
-            player_turn(rest, member ,c, count);
+            player_turn(rest, member, count);
         }
         else{
             sleep(3); //如果存活，暂停3秒，给玩家反应时间
