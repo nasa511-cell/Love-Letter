@@ -61,6 +61,8 @@ int create_card(vector<int>& rest, int& count){
         x = rand() % 8;
 
     }
+    count--;
+    if (count <= 10) {cout << "牌堆剩余" << count << "张牌" << endl;} 
     rest[x]--;
     return x;
 
@@ -85,7 +87,6 @@ public:
         }
         int c = create_card(rest, count);
         if (c == -1) {return false;}
-        count--;
         card[0] = c;
         return false;
 
@@ -142,7 +143,6 @@ public:
                     int guess = 0;
                     do{
                         guess = read_int((string)"请猜测他的身份牌：");
-                        cin >> guess;
                         if (guess < 0 || guess > 7){
                             cout << "请重新猜测!" << endl;
                         }
@@ -322,7 +322,7 @@ public:
     }
 
     void AI_turn(vector<int>& rest, vector<Player>& member, int& cur_id, int& count){
-        string name = "player" + (to_string)(cur_id);
+        string name = (string)"玩家" + (to_string)(cur_id);
         int sum = card[0] + card[1];
         //女伯爵强制打出
         if ((card[1] == 6 && (card[0] == 4 || card[0] == 5))
@@ -334,6 +334,9 @@ public:
 
         }
         int show = card[rand() % 2];
+        if (show == 7){
+            show = sum - show;
+        }
         card.clear();
         card.push_back(sum - show);
 
@@ -351,7 +354,7 @@ public:
                     return;
                 }
                 else{
-                    string tar = choose == 0 ? (string)"你" : ((string)"玩家" + (to_string)(cur_id));
+                    string tar = choose == 0 ? (string)"你" : ((string)"玩家" + (to_string)(choose + 1));
                     int guess = rand() % 8;
                     cout << name << "猜测" << tar << "的身份为" << guess << endl;
                     if (member[choose].card[0] == guess){
@@ -412,6 +415,7 @@ public:
                 }
                 else{
                     string tar = choose == 0 ? (string)"你" : (string)"玩家" + (to_string)(choose + 1);
+                    cout << name << "选择了" << tar << "作为比较对象" << endl;
                     if (card[0] > member[choose].card[0]){
                         cout << tar << "死亡" << endl;
                         member[choose].isAlive = false;
@@ -449,8 +453,12 @@ public:
                     return;
                 }
                 else{
-                    string tar = choose == 0 ? "你" : "玩家" + (char)(cur_id + '0');
+                    string tar = choose == 0 ? (string)"你" : (string)"玩家" + (to_string)(choose + 1);
                     bool someone_dead = member[choose].throw_card(rest, count);
+
+                    if (someone_dead){
+                        cout << tar << "因弃掉了公主而死亡了" << endl;
+                    }
                     
                 }
                 break;
@@ -473,6 +481,8 @@ public:
                     return;
                 }
                 else{
+                    string tar = choose == 0 ? (string)"你" : (string)"玩家" + (to_string)(choose + 1);
+                    cout << name << "选择了" << tar << "交换手牌" << endl;
                     auto it = card[0];
                     card[0] = member[choose].card[0];
                     member[choose].card[0] = it;
@@ -507,14 +517,14 @@ public:
         if (!isAlive){
             return;
         }
+        sleep(2); //如果存活，暂停2秒，给玩家反应时间
         bechosen = true;
         int c = create_card(rest, count);
-        count--;
+        card.push_back(c);
         if (cur_id == 1){
             player_turn(rest, member ,c, count);
         }
         else{
-            card.push_back(c);
             AI_turn(rest,member,cur_id, count);
         }
 
@@ -532,8 +542,7 @@ void game(){
     rest[5] = rest[6] = rest[7] = 1; //比较大的三张牌数量为1
     int count = 16;  //牌的数量
     create_card(rest, count); //游戏开始时默认少一张牌
-    
-
+   
     //创建玩家和AI对象
     Player player(create_card(rest, count), false, true);
     Player AI_1(create_card(rest, count), true, true);
@@ -548,7 +557,6 @@ void game(){
 
     while(member[0].isAlive + member[1].isAlive + member[2].isAlive + member[3].isAlive >= 1
     && count != 0){
-        sleep(2);
         //先处理场上只有一名玩家存活的情况
         if (member[0].isAlive + member[1].isAlive + member[2].isAlive + member[3].isAlive == 1){
             if (member[0].isAlive){
@@ -581,6 +589,7 @@ void game(){
         if (cur_id == 5){
             cur_id = 1;
         }
+
 
     }
     if (count == 0){
