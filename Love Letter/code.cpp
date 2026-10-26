@@ -8,6 +8,7 @@
 5.国王 king 与另一位玩家交换手牌 1张
 6.女伯爵 countess 有王子或国王时会强制打出 1张
 7.公主 princess 打出时会立即出局 1张
+只剩一人存活时自动获胜，或是牌堆为空时点数最大的人获胜
 */
 
 
@@ -18,6 +19,44 @@
 #include <ctime>
 #include <unistd.h>
 using namespace std;
+
+//将卡牌等相关数据和操作抽象出来
+//一个卡牌名称的枚举，用名称代替，便于阅读和维护
+enum CardType{
+    Guard = 0,
+    Priest,
+    Baron,
+    Handmaid,
+    Prince,
+    King,
+    Countess,
+    Princess
+};
+
+//牌库类Deck，deck:牌库，一副牌
+class Deck{
+public:
+    vector<int> rest;
+    int count;
+
+    Deck(): rest{5,2,2,2,2,1,1,1}, count(16) {}
+
+    //随机抽取一张牌
+    int create_card(){
+        if (count <= 0) {return -1;}
+        int x = -1;
+        while(x < 0 || rest[x] == 0){
+            x = rand() % 8;
+
+        }
+        count--;
+        rest[x]--;
+        return x;
+    }
+
+
+};
+
 
 //全局变量：卡牌数组
 string card_name[] = {"守卫", "祭司", "男爵", "侍女", "王子", "国王", 
@@ -53,19 +92,12 @@ int read_int(const string& prompt){
     }
 }
 
-//随机抽取一张牌
-int create_card(vector<int>& rest, int& count){
-    if (count <= 0) {return -1;}
-    int x = -1;
-    while(x < 0 || rest[x] == 0){
-        x = rand() % 8;
+//先显式声明，应对嵌套使用
+class Player;
 
-    }
-    count--;
-    rest[x]--;
-    return x;
+//统一的目标选择函数
+int choose_tar(vector<Player>& member, const string& prompt);
 
-}
 
 class Player{
 public:
@@ -79,26 +111,26 @@ public:
             card({id}), isAI(isAI), isAlive(isAlive), bechosen(bechosen) {}
 
     //弃牌,并返回是否造成死亡
-    bool throw_card(vector<int>& rest, int& count){
+    bool throw_card(Deck& deck){
         if (card[0] == 7){
             isAlive = false;
             return true;
         }
-        int c = create_card(rest, count);
+        int c = deck.create_card();
         card[0] = c;
         return false;
 
     }
 
     //玩家回合
-    void player_turn(vector<int>& rest, vector<Player>& member, int& count){
+    void player_turn(Deck& deck, vector<Player>& member){
         cout << "你的回合!" << endl;
         cout << "你摸到了" << card[1] << "." << card_name[card[1]];
         cout << "，你原来的手牌是" << card[0] << "." << card_name[card[0]] << endl;
         int sum = card[0] + card[1];
         //女伯爵强制打出
-        if ((card[1] == 6 && (card[0] == 4 || card[0] == 5))
-            || (card[0] == 6 && (card[1] == 4 || card[1] == 5))){
+        if ((card[1] == Countess && (card[0] == Prince || card[0] == King))
+            || (card[0] == Countess && (card[1] == Prince || card[1] == King))){
             sleep(2);
             cout << "你必须打出6.女伯爵" << endl;
             card.pop_back();
@@ -121,18 +153,8 @@ public:
         card[0] = sum - show;
 
         switch(show){
-            case 0:{
-                int choose = 0;
-                do{
-                    choose = read_int((string)"请选择你要猜测身份的玩家编号：");
-                    if (choose < 1 || choose > 4 || !member[choose - 1].bechosen
-                       || !member[choose - 1].isAlive){
-                        cout << "选择错误，请重新选择！" << endl;
-                       }
-                    else{
-                        break;
-                    }
-                } while(true);
+            case Guard:{
+                int choose = choose_tar(member, (string)"请选择你要猜测身份的玩家编号：");
 
                 if (choose == 1){
                     cout << "你选择了自己作为技能目标" << endl;
@@ -144,7 +166,7 @@ public:
                     do{
                         guess = read_int((string)"请猜测他的身份牌：");
                         if (guess < 1 || guess > 7){
-                            cout << "请重新猜测!" << endl;
+                            cout << "非法猜测，请重新猜测!" << endl;
                         }
                         else{
                             break;
@@ -166,17 +188,7 @@ public:
             }
 
             case 1:{
-                int choose = 0;
-                do{
-                    choose = read_int((string)"请选择你要查看身份的玩家编号：");
-                    if (choose < 1 || choose > 4 || !member[choose - 1].bechosen
-                       || !member[choose - 1].isAlive){
-                        cout << "选择错误，请重新选择！" << endl;
-                       }
-                    else{
-                        break;
-                    }
-                } while(true);
+                int choose = choose_tar(member, (string)"请选择你要查看身份的玩家编号：");
 
                 if (choose == 1){
                     cout << "你选择了自己作为技能目标" << endl;
@@ -193,17 +205,7 @@ public:
             }
 
             case 2:{
-                int choose = 0;
-                do{
-                    choose = read_int((string)"请选择你要比较手牌的玩家编号：");
-                    if (choose < 1 || choose > 4 || !member[choose - 1].bechosen
-                       || !member[choose - 1].isAlive){
-                        cout << "选择错误，请重新选择！" << endl;
-                       }
-                    else{
-                        break;
-                    }
-                } while(true);
+                int choose = choose_tar(member, (string)"请选择你要比较手牌的玩家编号：");
 
                 if (choose == 1){
                     cout << "你选择了自己作为技能目标" << endl;
@@ -239,29 +241,20 @@ public:
             }
 
             case 4:{
-                int choose = 0;
-                do{
-                    choose = read_int((string)"请选择你要使其弃牌的玩家编号：");
-                    if (choose < 1 || choose > 4 || !member[choose - 1].bechosen
-                       || !member[choose - 1].isAlive){
-                        cout << "选择错误，请重新选择！" << endl;
-                       }
-                    else{
-                        break;
-                    }
-                } while(true);
-
-                if (choose == 1){
-                    cout << "你弃掉了" << card[0] << "." << card_name[card[0]] << endl;
-
-                }
-                if (count == 0){
+                int choose = choose_tar(member, (string)"请选择你要使其弃牌的玩家编号：");
+                
+                if (deck.count == 0){
                     cout << "牌堆里没有牌，技能无效" << endl;
                     return;
 
                 }
 
-                bool someone_dead = member[choose - 1].throw_card(rest, count);
+                if (choose == 1){
+                    cout << "你弃掉了" << card[0] << "." << card_name[card[0]] << endl;
+
+                }
+                
+                bool someone_dead = member[choose - 1].throw_card(deck);
                 if (someone_dead){
                     if (choose == 1){
                         cout << "你因弃掉公主而死亡" << endl;
@@ -281,17 +274,7 @@ public:
             }
 
             case 5:{
-                int choose = 0;
-                do{
-                    choose = read_int((string)"请选择你要使交换手牌的玩家编号：");
-                    if (choose < 1 || choose > 4 || !member[choose - 1].bechosen
-                       || !member[choose - 1].isAlive){
-                        cout << "选择错误，请重新选择！" << endl;
-                       }
-                    else{
-                        break;
-                    }
-                } while(true);
+                int choose = choose_tar(member, (string)"请选择你要使交换手牌的玩家编号：");
 
                 if (choose == 1){
                     cout << "你选择了自己作为技能目标" << endl;
@@ -300,9 +283,9 @@ public:
                 }
                 else{
                     int other = member[choose - 1].card[0];
-                    auto it = card[0];
+                    int mine = card[0];
                     card[0] = member[choose - 1].card[0];
-                    member[choose - 1].card[0] = it;
+                    member[choose - 1].card[0] = mine;
                     cout << "你的身份变为" << card[0] << ".";
                     cout << card_name[card[0]] << endl;
                     
@@ -326,7 +309,7 @@ public:
         
     }
 
-    void AI_turn(vector<int>& rest, vector<Player>& member, int& cur_id, int& count){
+    void AI_turn(Deck& deck, vector<Player>& member, int& cur_id){
         string name = (string)"玩家" + (to_string)(cur_id);
         int sum = card[0] + card[1];
         //女伯爵强制打出
@@ -457,13 +440,13 @@ public:
                 else{
                     tar = choose == 0 ? (string)"你" : (string)"玩家" + (to_string)(choose + 1);
                 }
-                if (count == 0){
+                if (deck.count == 0){
                     cout << "牌堆里没有牌，技能无效" << endl;
                     return;
 
                 }
                 //进行弃牌，并判断有没有死人
-                bool someone_dead = member[choose].throw_card(rest, count);
+                bool someone_dead = member[choose].throw_card(deck);
                 if (choose == 0){
                     cout << "你现在的手牌是" << member[0].card[0] << "." << card_name[member[0].card[0]] << endl;
                 }
@@ -520,20 +503,20 @@ public:
     }
 
     //回合函数
-    void turn(vector<int>& rest, vector<Player>& member, int& cur_id, int& count){
+    void turn(Deck& deck, vector<Player>& member, int& cur_id){
         if (!isAlive){
             return;
         }
         bechosen = true;
-        int c = create_card(rest, count);
-        cout << "牌堆剩余" << count << "张牌" << endl;
+        int c = deck.create_card();
+        cout << "牌堆剩余" << deck.count << "张牌" << endl;
         card.push_back(c);
         if (cur_id == 1){
-            player_turn(rest, member, count);
+            player_turn(deck, member);
         }
         else{
             sleep(3); //如果存活，暂停3秒，给玩家反应时间
-            AI_turn(rest,member,cur_id, count);
+            AI_turn(deck ,member,cur_id);
         }
 
     }
@@ -542,64 +525,49 @@ public:
 };
 
 
-
-void game(){
-    //游戏的所有卡牌，用一个数组表示，表示还剩余多少张
-    vector<int> rest(8,2);
-    rest[0] = 5; //守卫为5张
-    rest[5] = rest[6] = rest[7] = 1; //比较大的三张牌数量为1
-    int count = 16;  //牌的数量
-    create_card(rest, count); //游戏开始时默认少一张牌
-   
-    //创建玩家和AI对象
-    Player player(create_card(rest, count), false, true);
-    Player AI_1(create_card(rest, count), true, true);
-    Player AI_2(create_card(rest, count), true, true);
-    Player AI_3(create_card(rest, count), true, true);
-
-    //玩家数组
-    vector<Player> member = {player, AI_1, AI_2, AI_3};
-
-    //当前玩家号码
-    int cur_id = 1;
-
-    while(member[0].isAlive + member[1].isAlive + member[2].isAlive + member[3].isAlive >= 1
-    && count != 0){
-        //先处理场上只有一名玩家存活的情况
-        if (member[0].isAlive + member[1].isAlive + member[2].isAlive + member[3].isAlive == 1){
-            if (member[0].isAlive){
-                cout << "只有你存活！" << endl;
-                cout << "你获得胜利！" << endl;
-                return;
-            }
-            else if (member[1].isAlive){
-                cout << "只有玩家2存活！" << endl;
-                cout << "玩家2获得胜利！" << endl;
-                return;
-            }
-            else if (member[2].isAlive){
-                cout << "只有玩家3存活！" << endl;
-                cout << "玩家3获得胜利！" << endl;
-                return;
-            }
-            else{
-                cout << "只有玩家4存活！" << endl;
-                cout << "玩家4获得胜利！" << endl;
-                return;
-            }
-            
-
+//统一的目标选择函数
+int choose_tar(vector<Player>& member, const string& prompt){
+    int choose = 0;
+    do{
+        choose = read_int(prompt);
+        if (choose < 1 || choose > (int)member.size() || !member[choose - 1].bechosen
+            || !member[choose - 1].isAlive){
+            cout << "选择错误，请重新选择！" << endl;
         }
+        else {return choose; }
+    } while(true);
+}
 
-        //游戏继续
-        member[cur_id - 1].turn(rest, member, cur_id,count);
-        cur_id++;
-        if (cur_id == 5){
-            cur_id = 1;
+//两个检测游戏是不是结束的函数
+bool check_end_oneAlive(vector<Player>& member){
+    if (member[0].isAlive + member[1].isAlive + member[2].isAlive + member[3].isAlive == 1){
+        if (member[0].isAlive){
+            cout << "只有你存活！" << endl;
+            cout << "你获得胜利！" << endl;
+            return true;
         }
-
-
+        else if (member[1].isAlive){
+            cout << "只有玩家2存活！" << endl;
+            cout << "玩家2获得胜利！" << endl;
+            return true;
+        }
+        else if (member[2].isAlive){
+            cout << "只有玩家3存活！" << endl;
+            cout << "玩家3获得胜利！" << endl;
+            return true;
+        }
+        else{
+            cout << "只有玩家4存活！" << endl;
+            cout << "玩家4获得胜利！" << endl;
+            return true;
+        }
     }
+    
+    return false;
+}
+
+//牌堆被摸完的情况，看看谁赢了，注意可能有多个人获胜，需要维护一个数组
+void check_end_noCard(vector<Player>& member, int& count){
     if (count == 0){
         vector<int> win_id;
         int max = -1;
@@ -631,7 +599,47 @@ void game(){
         }
 
     }
+
     cout << "游戏结束" << endl;
+}
+
+
+void game(){
+    //游戏的所有卡牌，用一个卡牌类表示，表示还剩余多少张
+    Deck deck;
+    deck.create_card(); //游戏开始时默认少一张牌
+   
+    //创建玩家和AI对象
+    Player player(deck.create_card(), false, true);
+    Player AI_1(deck.create_card(), true, true);
+    Player AI_2(deck.create_card(), true, true);
+    Player AI_3(deck.create_card(), true, true);
+
+    //玩家数组，值为拷贝，将来只用这个值即可
+    vector<Player> member = {player, AI_1, AI_2, AI_3};
+
+    //当前玩家号码
+    int cur_id = 1;
+
+    while(member[0].isAlive + member[1].isAlive + member[2].isAlive + member[3].isAlive >= 1
+    && deck.count != 0){
+        //先处理场上只有一名玩家存活的情况
+        bool isend = check_end_oneAlive(member);
+        if (isend){
+            cout << "游戏结束" << endl;
+            return;
+        }
+
+        //游戏继续
+        member[cur_id - 1].turn(deck, member, cur_id);
+        if (++cur_id == 5){
+            cur_id = 1;
+        }
+
+
+    }
+    //牌堆摸完了，游戏自然结束
+    check_end_noCard(member, deck.count);
 }
 
 int main(){
@@ -662,4 +670,3 @@ int main(){
     } while (input);
     
 }
-
