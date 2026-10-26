@@ -39,6 +39,18 @@ void start_menu(){
     cout << "场上有四名玩家，分别是你，玩家2，玩家3，玩家4" << endl;
 }
 
+//统一的输入函数，防止输入字母导致死循环
+int read_int(const string& prompt){
+    int x;
+    while(true){
+        cout << prompt;
+        if (cin >> x) {return x;}
+        cin.clear();
+        cin.ignore(10000, '\n');
+        cout << "输入失败！请重新输入！" << endl;
+    }
+}
+
 //随机抽取一张牌
 int create_card(vector<int>& rest){
     int x = -1;
