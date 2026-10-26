@@ -47,12 +47,13 @@ int read_int(const string& prompt){
         if (cin >> x) {return x;}
         cin.clear();
         cin.ignore(10000, '\n');
-        cout << "输入失败！请重新输入！" << endl;
+        cout << "输入失败，请重新输入！" << endl;
     }
 }
 
 //随机抽取一张牌
-int create_card(vector<int>& rest){
+int create_card(vector<int>& rest, int& count){
+    if (count == 0){ return -1; }
     int x = -1;
     while(x < 0 || rest[x] == 0){
         x = rand() % 8;
@@ -74,16 +75,14 @@ public:
     Player(int id, bool isAI, bool isAlive = true, bool bechosen = true): 
             card({id}), isAI(isAI), isAlive(isAlive), bechosen(bechosen) {}
 
-    //弃牌
+    //弃牌,并返回是否造成死亡
     bool throw_card(vector<int>& rest, int& count){
         if (card[0] == 7){
             isAlive = false;
             return true;
         }
-        if (count == 0){
-            return false;
-        }
-        int c = create_card(rest);
+        int c = create_card(rest, count);
+        if (c == -1) {return false;}
         count--;
         card[0] = c;
         return false;
@@ -96,7 +95,6 @@ public:
         cout << "你摸到了" << c << "." << card_name[c];
         cout << "，你原来的手牌是" << card[0] << "." << card_name[card[0]] << endl;
         int sum = card[0] + c;
-        int show = 0;
         //女伯爵强制打出
         if ((c == 6 && (card[0] == 4 || card[0] == 5))
             || (card[0] == 6 && (c == 4 || c == 5))){
@@ -105,10 +103,10 @@ public:
             return;
 
         }
+        int show = 0;
         do{
-            cout << "请选择你要出的牌: ";
-            cin >> show;
-            if (show != c && show != card[0] ){
+            show = read_int((string)"请选择你要出的牌: ");
+            if (show != c && show != card[0]){
                 cout << "你没有这张牌！" << endl;
             }
             else{
@@ -122,8 +120,7 @@ public:
             case 0:{
                 int choose = 0;
                 do{
-                    cout << "请选择你要猜测身份的玩家：";
-                    cin >> choose;
+                    choose = read_int((string)"请选择你要猜测身份的玩家：");
                     if (choose < 1 || choose > 4 || !member[choose - 1].bechosen
                        || !member[choose - 1].isAlive){
                         cout << "选择错误，请重新选择！" << endl;
@@ -141,7 +138,7 @@ public:
                 else{
                     int guess = 0;
                     do{
-                        cout << "请猜测它的身份牌：";
+                        guess = read_int((string)"请猜测它的身份牌：");
                         cin >> guess;
                         if (guess < 0 || guess > 7){
                             cout << "请重新猜测!" << endl;
@@ -168,8 +165,7 @@ public:
             case 1:{
                 int choose = 0;
                 do{
-                    cout << "请选择你要查看身份的玩家：";
-                    cin >> choose;
+                    choose = read_int((string)"请选择你要查看身份的玩家：");
                     if (choose < 1 || choose > 4 || !member[choose - 1].bechosen
                        || !member[choose - 1].isAlive){
                         cout << "选择错误，请重新选择！" << endl;
@@ -196,8 +192,7 @@ public:
             case 2:{
                 int choose = 0;
                 do{
-                    cout << "请选择你要比较手牌的玩家：";
-                    cin >> choose;
+                    choose = read_int((string)"请选择你要比较手牌的玩家：");
                     if (choose < 1 || choose > 4 || !member[choose - 1].bechosen
                        || !member[choose - 1].isAlive){
                         cout << "选择错误，请重新选择！" << endl;
@@ -243,8 +238,7 @@ public:
             case 4:{
                 int choose = 0;
                 do{
-                    cout << "请选择你要使其弃牌的玩家：";
-                    cin >> choose;
+                    choose = read_int((string)"请选择你要使其弃牌的玩家：");
                     if (choose < 1 || choose > 4 || !member[choose - 1].bechosen
                        || !member[choose - 1].isAlive){
                         cout << "选择错误，请重新选择！" << endl;
@@ -281,8 +275,7 @@ public:
             case 5:{
                 int choose = 0;
                 do{
-                    cout << "请选择你要使交换手牌的玩家：";
-                    cin >> choose;
+                    choose = read_int((string)"请选择你要使交换手牌的玩家：");
                     if (choose < 1 || choose > 4 || !member[choose - 1].bechosen
                        || !member[choose - 1].isAlive){
                         cout << "选择错误，请重新选择！" << endl;
@@ -333,6 +326,7 @@ public:
             || (card[0] == 6 && (card[1] == 4 || card[1] == 5))){
             cout << name << "打出6.女伯爵" << endl;
             card[0] = sum - 6;
+            card.pop_back();
             return;
 
         }
@@ -511,7 +505,7 @@ public:
             return;
         }
         bechosen = true;
-        int c = create_card(rest);
+        int c = create_card(rest, count);
         count--;
         if (cur_id == 1){
             player_turn(rest, member ,c, count);
@@ -535,20 +529,18 @@ void game(){
     vector<int> rest(8,2);
     rest[0] = 5; //守卫为5张
     rest[5] = rest[6] = rest[7] = 1; //比较大的三张牌数量为1
-    create_card(rest); //游戏开始时默认少一张牌
+    int count = 16;  //牌的数量
+    create_card(rest, count); //游戏开始时默认少一张牌
     
 
     //创建玩家和AI对象
-    Player player(create_card(rest), false, true);
-    Player AI_1(create_card(rest), true, true);
-    Player AI_2(create_card(rest), true, true);
-    Player AI_3(create_card(rest), true, true);
+    Player player(create_card(rest, count), false, true);
+    Player AI_1(create_card(rest, count), true, true);
+    Player AI_2(create_card(rest, count), true, true);
+    Player AI_3(create_card(rest, count), true, true);
 
     //玩家数组
     vector<Player> member = {player, AI_1, AI_2, AI_3};
-
-    //剩余牌的数量
-    int count = 11;
 
     //当前玩家号码
     int cur_id = 1;
